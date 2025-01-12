@@ -1,0 +1,92 @@
+Copyright notice:
+
+Copyright (c) 2024 Péter Vámos
+
+  https://github.com/pvamos
+  pvamos@gmail.com
+  https://linkedin.com/in/pvamos
+
+
+This software's Bosch BME280 sensor handling is based on Bosch's official BME280 Sensor API,
+originally created and maintained by Bosch Sensortec (copyright (c) 2016-2023), published and available at:
+https://github.com/boschsensortec/BME280_SensorAPI
+
+BME280 Sensor API is distributed under the BSD-3-Clause License, which is included in the original repository:
+https://github.com/boschsensortec/BME280_SensorAPI/blob/master/LICENSE
+and in this repository in the `LICENSE_BME280` file.
+
+Bosch's `i2c.h` (C++) BME280 usage pattern has been re-implemented using ESP-IDF's `i2c_master.h` (C).
+This reimplementation is an independent work and does not include any direct copying
+of the vendor's original source code, and it is distributed under the terms of the MIT License.
+
+Bosch Sensortec retains the copyright to the original BME280 Sensor API sample code.
+
+
+This software's Texas Instruments TMP117 sensor handling is based on SparkFun TMP117 Arduino Library
+originally created and maintained by SparkFun Electronics (copyright (c) 2016-2023), published and available at:
+https://github.com/sparkfun/SparkFun_TMP117_Arduino_Library 
+
+SparkFun TMP117 Arduino Library is distributed under the MIT License, which is included in the original repository:
+https://github.com/sparkfun/SparkFun_TMP117_Arduino_Library/blob/master/LICENSE.md
+and in this repository in the `LICENSE_TMP117` file.
+
+SparkFun's `i2c.h` (C++) TMP117 I2C usage pattern has been re-implemented using ESP-IDF's `i2c_master.h` (C).
+This reimplementation is an independent work and does not include any direct copying
+of the vendor's original source code, and it is distributed under the terms of the MIT License.
+
+SparkFun Electronics retains the copyright to the original SparkFun TMP117 Arduino Library sample code.
+
+
+This software includes a reimplementation of communication patterns for the AHT20 temperature and humidity Sensor,
+based on concepts and methods published in the sample code provided by Guangzhou Aosong Electronics Co., Ltd. for STM32 microcontrollers.
+
+The original sample code can be accessed via: the vendor's product page: http://www.aosong.com/en/products-32.html
+and sample code (RAR archive) download link: http://aosong.com/userfiles/files/software/AHT20-21%20DEMO%20V1_3(1).rar
+
+This reimplementation is an independent work and does not include any direct copying
+of the vendor's original source code, and it is distributed under the terms of the MIT License.
+
+Guangzhou Aosong Electronics Co., Ltd. retains the copyright to the original sample code.
+
+
+This software also uses the ESP-IDF framework,
+created and maintained by Espressif Systems (Shanghai) Co., Ltd., published and available at:
+https://github.com/espressif/esp-idf  
+
+ESP-IDF is distributed under the Apache License 2.0, which is included in the original repository:
+https://github.com/espressif/esp-idf/blob/master/LICENSE
+and in this repository in the `LICENSE_ESP-IDF` file.
+
+The parts of the ESP-IDF framework's code is used for building my own work.
+
+Espressif Systems (Shanghai) Co. Ltd. retains the copyright to the original ESP-IDF framework.
+
+
+This version includes extensions, modifications and re-implementation by Péter Vámos in 2024, published and available at:
+https://github.com/pvamos/esp32-envsensor-mqtt
+
+
+I publish my own work under the MIT License.
+
+
+MIT License
+
+Copyright (c) 2024 Péter Vámos  pvamos@gmail.com  https://github.com/pvamos
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
