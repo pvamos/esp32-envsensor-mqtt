@@ -7,6 +7,7 @@
 #include "aht20.h"
 #include "wifi_sta.h"
 #include "mqtt_push.h"
+#include "sht41.h"
 
 static const char *TAG = "MAIN";
 
@@ -42,51 +43,48 @@ void app_main() {
         return;
     }
 
+    // Initialize SHT41 sensor
+    if (sht41_init(I2C_NUM_0, GPIO_NUM_21, GPIO_NUM_22, 400000) != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to initialize SHT41 sensor");
+        return;
+    }
+
     // Initialize MQTT
     mqtt_init();
 
     // Main loop to read sensor data and publish to MQTT
     while (true) {
-        int32_t bme_raw_temp = 0, bme_raw_pressure = 0, bme_raw_humidity = 0;
-        float bme_comp_temp = 0.0f, bme_comp_pressure = 0.0f, bme_comp_humidity = 0.0f;
-        int16_t tmp_raw_temp = 0;
-        float tmp_comp_temp = 0.0f;
-        int32_t aht_raw_temp = 0, aht_raw_humidity = 0;
-        float aht_comp_temp = 0.0f, aht_comp_humidity = 0.0f;
+        float bme_temp, bme_pressure, bme_humidity;
+        float tmp_temp;
+        float aht_temp, aht_humidity;
+        float sht41_temp, sht41_humidity;
 
         // Read BME280 sensor values
-        if (bme280_read_raw(&bme_raw_temp, &bme_raw_pressure, &bme_raw_humidity) == ESP_OK &&
-            bme280_calculate_compensated(bme_raw_temp, bme_raw_pressure, bme_raw_humidity,
-                                         &bme_comp_temp, &bme_comp_pressure, &bme_comp_humidity) == ESP_OK) {
-            ESP_LOGI(TAG, "BME280 data collected successfully");
-        } else {
-            ESP_LOGE(TAG, "Failed to read BME280 data");
+        if (bme280_read_float(&bme_temp, &bme_pressure, &bme_humidity) == ESP_OK) {
+            mqtt_publish_float("bme280/temperature", bme_temp);
+            mqtt_publish_float("bme280/pressure", bme_pressure);
+            mqtt_publish_float("bme280/humidity", bme_humidity);
         }
 
         // Read TMP117 sensor values
-        if (tmp117_read_raw(&tmp_raw_temp) == ESP_OK &&
-            tmp117_calculate_compensated(tmp_raw_temp, &tmp_comp_temp) == ESP_OK) {
-            ESP_LOGI(TAG, "TMP117 data collected successfully");
-        } else {
-            ESP_LOGE(TAG, "Failed to read TMP117 data");
+        if (tmp117_read(&tmp_temp) == ESP_OK) {
+            mqtt_publish_float("tmp117/temperature", tmp_temp);
         }
 
         // Read AHT20 sensor values
-        if (aht20_read_raw(&aht_raw_temp, &aht_raw_humidity) == ESP_OK &&
-            aht20_calculate(aht_raw_temp, aht_raw_humidity, &aht_comp_temp, &aht_comp_humidity) == ESP_OK) {
-            ESP_LOGI(TAG, "AHT20 data collected successfully");
-        } else {
-            ESP_LOGE(TAG, "Failed to read AHT20 data");
+        if (aht20_read(&aht_temp, &aht_humidity) == ESP_OK) {
+            mqtt_publish_float("aht20/temperature", aht_temp);
+            mqtt_publish_float("aht20/humidity", aht_humidity);
         }
 
-        // Publish all sensor data to MQTT
-        mqtt_publish_all(bme_raw_temp, bme_raw_pressure, bme_raw_humidity,
-                         bme_comp_temp, bme_comp_pressure, bme_comp_humidity,
-                         tmp_raw_temp, tmp_comp_temp,
-                         aht_raw_temp, aht_raw_humidity,
-                         aht_comp_temp, aht_comp_humidity);
+        // Read SHT41 sensor values
+        if (sht41_read(&sht41_temp, &sht41_humidity) == ESP_OK) {
+            mqtt_publish_float("sht41/temperature", sht41_temp);
+            mqtt_publish_float("sht41/humidity", sht41_humidity);
+        }
 
         // Delay for 2 seconds
         vTaskDelay(pdMS_TO_TICKS(2000));
     }
 }
+
