@@ -2,27 +2,29 @@
 #define SHT41_H
 
 #include <esp_err.h>
-#include <i2cdev.h>
-#include <driver/gpio.h>
-#include <driver/i2c.h>
+#include "i2c.h"
+
+// SHT41 I2C Address
+#define SHT41_I2C_ADDR 0x44
+
+// SHT41 Commands
+#define SHT41_MEASURE_HIGH_PRECISION 0xFD
+#define SHT41_MEASURE_DELAY_MS 10
 
 /**
- * @brief Initialize the SHT41 sensor on the given I2C bus.
+ * @brief Initialize the SHT41 sensor.
  *
- * @param i2c_port I2C port number (e.g., I2C_NUM_0)
- * @param sda_pin GPIO number for SDA line
- * @param scl_pin GPIO number for SCL line
- * @param freq I2C clock frequency
- * @return esp_err_t ESP_OK on success, or an error code on failure
+ * @param bus_handle The I2C bus handle.
+ * @return esp_err_t ESP_OK on success or error code on failure.
  */
-esp_err_t sht41_init(i2c_port_t i2c_port, gpio_num_t sda_pin, gpio_num_t scl_pin, uint32_t freq);
+esp_err_t sht41_init(i2c_master_bus_handle_t bus_handle);
 
 /**
- * @brief Read temperature and humidity data from the SHT41 sensor.
+ * @brief Read temperature and humidity from the SHT41 sensor.
  *
- * @param temperature Pointer to store temperature in degrees Celsius
- * @param humidity Pointer to store humidity in percentage
- * @return esp_err_t ESP_OK on success, or an error code on failure
+ * @param temperature Pointer to store temperature in degrees Celsius.
+ * @param humidity Pointer to store humidity in percentage.
+ * @return esp_err_t ESP_OK on success or error code on failure.
  */
 esp_err_t sht41_read(float *temperature, float *humidity);
 

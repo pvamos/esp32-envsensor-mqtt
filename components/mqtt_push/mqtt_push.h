@@ -1,31 +1,28 @@
-#ifndef MQTT_H
-#define MQTT_H
+#ifndef MQTT_PUSH_H
+#define MQTT_PUSH_H
 
 #include <stdint.h>
 
-// Initialize the MQTT client and connect to the broker
+/**
+ * @brief Initialize the MQTT client and connect to the broker.
+ */
 void mqtt_init(void);
 
 /**
- * @brief Publish all sensor data in a single MQTT 5 message.
+ * @brief Publish all sensor data to the MQTT broker.
  *
- * @param bme_raw_temp Raw temperature from BME280.
- * @param bme_raw_pressure Raw pressure from BME280.
- * @param bme_raw_humidity Raw humidity from BME280.
- * @param bme_comp_temp Compensated temperature from BME280.
- * @param bme_comp_pressure Compensated pressure from BME280.
- * @param bme_comp_humidity Compensated humidity from BME280.
- * @param tmp_raw_temp Raw temperature from TMP117.
- * @param tmp_comp_temp Compensated temperature from TMP117.
- * @param aht_raw_temp Raw temperature from AHT20.
- * @param aht_raw_humidity Raw humidity from AHT20.
- * @param aht_comp_temp Compensated temperature from AHT20.
- * @param aht_comp_humidity Compensated humidity from AHT20.
+ * @param bme280_temp Temperature from BME280.
+ * @param bme280_pressure Pressure from BME280.
+ * @param bme280_humidity Humidity from BME280.
+ * @param tmp117_temp Temperature from TMP117.
+ * @param aht20_temp Temperature from AHT20.
+ * @param aht20_humidity Humidity from AHT20.
+ * @param sht41_temp Temperature from SHT41.
+ * @param sht41_humidity Humidity from SHT41.
  */
-void mqtt_publish_all(int32_t bme_raw_temp, int32_t bme_raw_pressure, int32_t bme_raw_humidity,
-                      float bme_comp_temp, float bme_comp_pressure, float bme_comp_humidity,
-                      int16_t tmp_raw_temp, float tmp_comp_temp,
-                      int32_t aht_raw_temp, int32_t aht_raw_humidity,
-                      float aht_comp_temp, float aht_comp_humidity);
+void mqtt_publish(float bme280_temp, float bme280_pressure, float bme280_humidity,
+                  float tmp117_temp, float aht20_temp, float aht20_humidity,
+                  float sht41_temp, float sht41_humidity);
 
-#endif // MQTT_H
+#endif // MQTT_PUSH_H
+
