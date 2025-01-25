@@ -6,8 +6,8 @@ static const char *TAG = "MQTT_PUSH";
 static esp_mqtt_client_handle_t mqtt_client;
 
 // MQTT broker details
-#define MQTT_BROKER_URI "mqtt://YourMQTTbroker"  // Replace with your MQTT broker URI
-#define MQTT_TOPIC "sensor/data"                // Replace with your desired topic
+#define MQTT_BROKER_URI "mqtt://192.168.1.83:1883"  // Replace with your MQTT broker URI
+#define MQTT_TOPIC "test/topic"                // Replace with your desired topic
 
 void mqtt_init(void) {
     esp_mqtt_client_config_t mqtt_cfg = {

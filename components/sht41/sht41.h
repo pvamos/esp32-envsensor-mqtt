@@ -9,7 +9,7 @@
 
 // SHT41 Commands
 #define SHT41_MEASURE_HIGH_PRECISION 0xFD
-#define SHT41_MEASURE_DELAY_MS 10
+#define SHT41_MEASURE_DELAY_MS 20
 
 /**
  * @brief Initialize the SHT41 sensor.
