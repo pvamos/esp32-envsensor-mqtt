@@ -38,10 +38,10 @@ void mqtt_publish(float bme280_temp, float bme280_pressure, float bme280_humidit
                   float sht41_temp, float sht41_humidity) {
     char payload[512];
     snprintf(payload, sizeof(payload),
-             "{\"bme280\":{\"temperature\":%.2f,\"pressure\":%.2f,\"humidity\":%.2f},"
-             "\"tmp117\":{\"temperature\":%.2f},"
-             "\"aht20\":{\"temperature\":%.2f,\"humidity\":%.2f},"
-             "\"sht41\":{\"temperature\":%.2f,\"humidity\":%.2f}}",
+             "{\"bme280\":{\"t\":%.2f,\"p\":%.4f,\"h\":%.3f},"
+             "\"tmp117\":{\"t\":%.4f},"
+             "\"aht20\":{\"t\":%.2f,\"h\":%.3f},"
+             "\"sht41\":{\"t\":%.2f,\"h\":%.3f}}",
              bme280_temp, bme280_pressure, bme280_humidity,
              tmp117_temp,
              aht20_temp, aht20_humidity,
