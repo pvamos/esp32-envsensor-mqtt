@@ -9,9 +9,43 @@
 extern "C" {
 #endif
 
+/**************************************************************************
+ * BCH(1023,1003) Single-Bit Correction
+ *************************************************************************/
+#define BCH_M          10    // GF(2^10)
+#define BCH_N          1023
+#define BCH_K          1003
+#define BCH_T          1     // 1-bit correct
+#define BCH_PARITY     (BCH_N - BCH_K) // 20 bits
+#define FRAME_DATA_LEN 125   // We pad data to 125 bytes
+#define FRAME_ECC_LEN   3    // Then append 3 ECC bytes
+
+/**************************************************************************
+ * Protocol Field Sizes
+ *************************************************************************/
+// 2 magic bytes = 'S'(0x53), 'N'(0x4E)
+#define PROTOCOL_MAGIC_BYTE_0  0x53
+#define PROTOCOL_MAGIC_BYTE_1  0x4E
+
+// We can define a version byte or flags byte if we wish
+#define PROTOCOL_VERSION       0x01
+
+// location ID is 6 bytes
+#define PROTOCOL_LOCATION_BYTES 6
+
+// message ID is 4 bytes
+#define PROTOCOL_MSGID_BYTES    4
+
+// mcu_serial is 12 bytes
+#define PROTOCOL_MCUSERIAL_BYTES 12
+
+/**************************************************************************
+ * BCH Initialization / Deinit
+ *************************************************************************/
+
 /**
  * @brief Initialize the BCH(1023,1003) environment (once at startup).
- * Builds any needed Galois field tables for GF(2^10).
+ *        Builds any needed Galois field tables for GF(2^10).
  */
 void protocol_init_bch(void);
 
@@ -20,25 +54,29 @@ void protocol_init_bch(void);
  */
 void protocol_deinit_bch(void);
 
+/**************************************************************************
+ * Frame-Building Functions
+ *************************************************************************/
+
 /**
- * @brief Build a minimal frame (no optional fields) with data blocks.
+ * @brief Build a MINIMAL frame (no optional fields).
  *
  * The final ECC is not added here; call protocol_add_ecc() after building.
  *
- * @param[out] frame_buf  Buffer to hold up to 125 + 3 = 128 bytes.
- * @param[out] frame_len  Final length before ECC (0..125).
- * @param[in]  message_id 16-bit ID in big-endian.
- * @param[in]  location_id 5-byte location.
- * @param[in]  bme_temp   BME280 temperature
- * @param[in]  bme_press  BME280 pressure
- * @param[in]  bme_hum    BME280 humidity
+ * @param[out] frame_buf   Buffer for up to 125+3=128 bytes
+ * @param[out] frame_len   Actual length before ECC
+ * @param[in]  message_id  4-byte message ID (big-endian)
+ * @param[in]  location_id 6-byte location ID
+ * @param[in]  bme_temp    BME280 temperature
+ * @param[in]  bme_press   BME280 pressure
+ * @param[in]  bme_hum     BME280 humidity
  * @param[in]  tmp117_temp TMP117 temperature
  */
 void protocol_build_minimal_frame(
     uint8_t *frame_buf,
     size_t  *frame_len,
-    uint16_t message_id,
-    const uint8_t location_id[5],
+    const uint8_t message_id[PROTOCOL_MSGID_BYTES],
+    const uint8_t location_id[PROTOCOL_LOCATION_BYTES],
     float bme_temp,
     float bme_press,
     float bme_hum,
@@ -46,16 +84,18 @@ void protocol_build_minimal_frame(
 );
 
 /**
- * @brief Build a full frame (with optional fields) to show how to add MCU fields, etc.
+ * @brief Build a FULL frame (with optional fields).
  *
- * @param[out] frame_buf   Buffer up to ~128 bytes.
- * @param[out] frame_len   Used length before ECC.
- * @param[in]  message_id  16-bit ID
- * @param[in]  location_id 5-byte array
- * @param[in]  mcu_type    e.g. 1=ESP32, 2=STM32
- * @param[in]  mcu_serial  4 bytes
- * @param[in]  fw_major    Firmware major
- * @param[in]  fw_minor    Firmware minor
+ * The final ECC is not added here; call protocol_add_ecc() after building.
+ *
+ * @param[out] frame_buf   Buffer for up to 125+3=128 bytes
+ * @param[out] frame_len   Actual length before ECC
+ * @param[in]  message_id  4-byte message ID (big-endian)
+ * @param[in]  location_id 6-byte location ID
+ * @param[in]  mcu_type    e.g. 1=ESP32
+ * @param[in]  mcu_serial  12-byte MCU serial
+ * @param[in]  fw_major    firmware major
+ * @param[in]  fw_minor    firmware minor
  * @param[in]  bme_temp    BME280 temperature
  * @param[in]  bme_press   BME280 pressure
  * @param[in]  bme_hum     BME280 humidity
@@ -65,10 +105,10 @@ void protocol_build_minimal_frame(
 void protocol_build_full_frame(
     uint8_t *frame_buf,
     size_t  *frame_len,
-    uint16_t message_id,
-    const uint8_t location_id[5],
+    const uint8_t message_id[PROTOCOL_MSGID_BYTES],
+    const uint8_t location_id[PROTOCOL_LOCATION_BYTES],
     uint8_t  mcu_type,
-    const uint8_t mcu_serial[4],
+    const uint8_t mcu_serial[PROTOCOL_MCUSERIAL_BYTES],
     uint8_t  fw_major,
     uint8_t  fw_minor,
     float bme_temp,
@@ -78,13 +118,15 @@ void protocol_build_full_frame(
     float aht_hum
 );
 
+/**************************************************************************
+ * ECC
+ *************************************************************************/
+
 /**
- * @brief Pad to 125 bytes, then compute 20-bit ECC and append 3 bytes.
+ * @brief Pad to FRAME_DATA_LEN, then compute 20-bit BCH remainder (3 bytes).
  *
- * For a total ~128 bytes (the top 4 bits of that last byte are wasted).
- *
- * @param[in,out] frame_buf  The partial frame data
- * @param[in,out] frame_len  Updated final length after ECC
+ * @param[in,out] frame_buf  partial frame data
+ * @param[in,out] frame_len  updated final length after ECC appended
  */
 void protocol_add_ecc(uint8_t *frame_buf, size_t *frame_len);
 
@@ -92,4 +134,4 @@ void protocol_add_ecc(uint8_t *frame_buf, size_t *frame_len);
 }
 #endif
 
-#endif /* MY_PROTOCOL_H */
+#endif // MY_PROTOCOL_H
