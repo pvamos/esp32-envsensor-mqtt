@@ -12,6 +12,15 @@
 #define TMP117_REG_CONFIG      0x01
 #define TMP117_REG_DEVICE_ID   0x0F
 
+// Additional EEPROM registers (scratch / ID):
+//  - EEPROM1 = 0x05
+//  - EEPROM2 = 0x06
+//  - EEPROM3 = 0x08
+
+#define TMP117_REG_EEPROM1    0x05
+#define TMP117_REG_EEPROM2    0x06
+#define TMP117_REG_EEPROM3    0x08
+
 // TMP117 Expected Device ID
 #define TMP117_DEVICE_ID 0x0117
 
@@ -34,5 +43,21 @@ esp_err_t tmp117_init(i2c_master_bus_handle_t bus_handle);
  */
 esp_err_t tmp117_read(float *temperature);
 
-#endif // TMP117_H
+/**
+ * @brief Read the EEPROM1, EEPROM2, EEPROM3 registers (each 2 bytes),
+ *        and store them (left-padded with 2 bytes of 0) into an 8-byte array:
+ *
+ *        out[0..1] = 0
+ *        out[2..3] = EEPROM1
+ *        out[4..5] = EEPROM2
+ *        out[6..7] = EEPROM3
+ *
+ * This yields 8 total bytes, with the 6 bytes from the 3 EEPROM registers
+ * in the final positions. The first 2 bytes are zero.
+ *
+ * @param out 8-byte buffer to store the ID
+ * @return esp_err_t ESP_OK on success
+ */
+esp_err_t tmp117_get_serial(uint8_t out[8]);
 
+#endif // TMP117_H

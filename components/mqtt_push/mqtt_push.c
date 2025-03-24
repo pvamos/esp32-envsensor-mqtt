@@ -3,17 +3,20 @@
 #include "mqtt_client.h"
 
 static const char *TAG = "MQTT_PUSH";
-static esp_mqtt_client_handle_t mqtt_client;
+static esp_mqtt_client_handle_t mqtt_client = NULL;
 
-// MQTT broker details
-#define MQTT_BROKER_URI "mqtt://192.168.1.83:1883"  // Replace with your MQTT broker URI
-#define MQTT_TOPIC "test/topic"                // Replace with your desired topic
+// Example topic for binary frames
+#define MQTT_BINARY_TOPIC "test/binary"
 
+/**
+ * @brief Initialize the MQTT client and connect to broker
+ */
 void mqtt_init(void) {
     esp_mqtt_client_config_t mqtt_cfg = {
+        // Adjust these to suit your broker
         .broker = {
             .address = {
-                .uri = MQTT_BROKER_URI,
+                .uri = "mqtt://192.168.1.83:1883", // your broker
             },
         },
     };
@@ -23,7 +26,6 @@ void mqtt_init(void) {
         ESP_LOGE(TAG, "Failed to initialize MQTT client");
         return;
     }
-
     esp_err_t err = esp_mqtt_client_start(mqtt_client);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "Failed to start MQTT client: %s", esp_err_to_name(err));
@@ -33,25 +35,33 @@ void mqtt_init(void) {
     ESP_LOGI(TAG, "MQTT client initialized and started");
 }
 
-void mqtt_publish(float bme280_temp, float bme280_pressure, float bme280_humidity,
-                  float tmp117_temp, float aht20_temp, float aht20_humidity,
-                  float sht41_temp, float sht41_humidity) {
-    char payload[512];
-    snprintf(payload, sizeof(payload),
-             "{\"bme280\":{\"t\":%.2f,\"p\":%.4f,\"h\":%.3f},"
-             "\"tmp117\":{\"t\":%.4f},"
-             "\"aht20\":{\"t\":%.2f,\"h\":%.3f},"
-             "\"sht41\":{\"t\":%.2f,\"h\":%.3f}}",
-             bme280_temp, bme280_pressure, bme280_humidity,
-             tmp117_temp,
-             aht20_temp, aht20_humidity,
-             sht41_temp, sht41_humidity);
+/**
+ * @brief Publish a raw binary frame to the configured MQTT broker.
+ *
+ * @param frame     pointer to binary data
+ * @param frame_len number of bytes
+ */
+void mqtt_publish_binary(const uint8_t *frame, size_t frame_len) {
+    if (!mqtt_client) {
+        ESP_LOGE(TAG, "MQTT client not initialized, call mqtt_init() first");
+        return;
+    }
+    if (!frame || frame_len == 0) {
+        ESP_LOGW(TAG, "mqtt_publish_binary: invalid data");
+        return;
+    }
 
-    int msg_id = esp_mqtt_client_publish(mqtt_client, MQTT_TOPIC, payload, 0, 1, 0);
+    // Publish raw bytes to a topic. QOS=1, no retain
+    int msg_id = esp_mqtt_client_publish(mqtt_client,
+                                         MQTT_BINARY_TOPIC,
+                                         (const char *)frame,
+                                         frame_len,
+                                         1 /* qos */,
+                                         0 /* retain */);
     if (msg_id == -1) {
-        ESP_LOGE(TAG, "Failed to publish sensor data");
+        ESP_LOGE(TAG, "Failed to publish binary data");
     } else {
-        ESP_LOGI(TAG, "Published sensor data to MQTT topic '%s', msg_id=%d", MQTT_TOPIC, msg_id);
+        ESP_LOGI(TAG, "Published %d bytes of binary data to topic '%s' (msg_id=%d)",
+                 (int)frame_len, MQTT_BINARY_TOPIC, msg_id);
     }
 }
-

@@ -38,5 +38,12 @@ esp_err_t bme280_init(i2c_master_bus_handle_t bus_handle);
  */
 esp_err_t bme280_read(float *temperature, float *pressure, float *humidity);
 
-#endif // BME280_H
+/**
+ * @brief Retrieve an 8-byte sensor serial/ID for the BME280 by hashing calibration data.
+ *
+ * @param out 8-byte buffer to receive the sensor ID
+ * @return esp_err_t ESP_OK on success
+ */
+esp_err_t bme280_get_serial(uint8_t out[8]);
 
+#endif // BME280_H

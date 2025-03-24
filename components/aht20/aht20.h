@@ -28,5 +28,12 @@ esp_err_t aht20_init(i2c_master_bus_handle_t bus_handle);
  */
 esp_err_t aht20_read(float *temperature, float *humidity);
 
-#endif // AHT20_H
+/**
+ * @brief Return an 8-byte zeroed-out serial for AHT20 (no real hardware serial).
+ *
+ * @param out 8-byte buffer
+ * @return esp_err_t ESP_OK
+ */
+esp_err_t aht20_get_serial(uint8_t out[8]);
 
+#endif // AHT20_H
