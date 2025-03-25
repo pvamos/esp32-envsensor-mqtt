@@ -4,32 +4,45 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "esp_system.h" // for esp_read_mac()
-#include <string.h>
+#include <string.h>     // memset, memcpy
 #include <math.h>       // for NAN
 
+// Wi-Fi and MQTT
 #include "wifi_sta.h"
 #include "mqtt_push.h"
 #include "i2c.h"
 
-// sensor drivers
+// Sensor drivers
 #include "bme280.h"
 #include "tmp117.h"
 #include "aht20.h"
 #include "sht41.h"
 
-// binary protocol
+// Updated binary protocol
 #include "protocol.h"
 
 static const char *TAG = "MAIN";
 
-// Use definitions from main.h
-static const uint8_t s_location_id[5] = LOCATION_ID;
+// We define the 6-byte location here from the macro in main.h
+static const uint8_t s_location_id[6] = LOCATION_ID;
+
+/////////////////////////////////////////
+// Helper: Pack a 32-bit message counter into a 4-byte array (big-endian)
+/////////////////////////////////////////
+static void pack_message_id(uint8_t out[4], uint32_t counter)
+{
+    // big-endian
+    out[0] = (uint8_t)((counter >> 24) & 0xFF);
+    out[1] = (uint8_t)((counter >> 16) & 0xFF);
+    out[2] = (uint8_t)((counter >>  8) & 0xFF);
+    out[3] = (uint8_t)( counter        & 0xFF);
+}
 
 void app_main(void)
 {
     ESP_LOGI(TAG, "Starting application...");
 
-    // 1) Wi-Fi
+    // 1) Initialize Wi-Fi
     if (wifi_init() != ESP_OK) {
         ESP_LOGE(TAG, "Wi-Fi initialization failed");
         return;
@@ -38,7 +51,7 @@ void app_main(void)
     // 2) MQTT
     mqtt_init();
 
-    // 3) I2C
+    // 3) I2C bus
     i2c_master_bus_handle_t i2c_bus_handle;
     if (i2c_master_init(&i2c_bus_handle) != ESP_OK) {
         ESP_LOGE(TAG, "Failed to initialize I2C bus");
@@ -63,10 +76,12 @@ void app_main(void)
         return;
     }
 
-    // 5) Initialize BCH environment for protocol
+    // 5) Initialize BCH environment (for ECC)
     protocol_init_bch();
 
-    // 6) Read sensor serials once
+    ///////////////////////////////////////////////
+    // Read sensor serials once
+    ///////////////////////////////////////////////
     uint8_t bme280_serial[8];
     uint8_t tmp117_serial[8];
     uint8_t aht20_serial[8];
@@ -85,100 +100,107 @@ void app_main(void)
              tmp117_serial[0], tmp117_serial[1], tmp117_serial[2], tmp117_serial[3],
              tmp117_serial[4], tmp117_serial[5], tmp117_serial[6], tmp117_serial[7]);
 
-    ESP_LOGI(TAG, "AHT20 serial:  %02X %02X %02X %02X %02X %02X %02X %02X",
+    ESP_LOGI(TAG, "AHT20 serial : %02X %02X %02X %02X %02X %02X %02X %02X",
              aht20_serial[0], aht20_serial[1], aht20_serial[2], aht20_serial[3],
              aht20_serial[4], aht20_serial[5], aht20_serial[6], aht20_serial[7]);
 
-    ESP_LOGI(TAG, "SHT41 serial:  %02X %02X %02X %02X %02X %02X %02X %02X",
+    ESP_LOGI(TAG, "SHT41 serial: %02X %02X %02X %02X %02X %02X %02X %02X",
              sht41_serial[0], sht41_serial[1], sht41_serial[2], sht41_serial[3],
              sht41_serial[4], sht41_serial[5], sht41_serial[6], sht41_serial[7]);
 
-    // 7) Read ESP32 MAC => produce 12-byte serial
-    // left-pad with 6 bytes of 0, then copy the 6 mac bytes
+    ///////////////////////////////////////////////
+    // Build 12-byte MCU serial from 6-byte MAC
+    // left-pad with 6 zero bytes
+    ///////////////////////////////////////////////
     uint8_t raw_mac[6];
     esp_read_mac(raw_mac, ESP_MAC_WIFI_STA);
 
     uint8_t mcu_serial[12];
-    memset(mcu_serial, 0, 12);  // fill with zeros
-
-    // place 6 mac bytes in the last half
+    memset(mcu_serial, 0, 12);
+    // place the 6 MAC bytes in [6..11]
     memcpy(&mcu_serial[6], raw_mac, 6);
 
-    ESP_LOGI(TAG, "MCU 12-byte serial = [0..5=0], [6..11=MAC]");
+    ESP_LOGI(TAG, "MCU 12-byte serial: zero left + MAC =>");
     ESP_LOG_BUFFER_HEXDUMP(TAG, mcu_serial, 12, ESP_LOG_INFO);
 
-    // sensor data
-    float bme280_temp = NAN, bme280_press = NAN, bme280_hum = NAN;
-    float tmp117_temp = NAN;
-    float aht20_temp  = NAN, aht20_hum = NAN;
-    float sht41_temp  = NAN, sht41_hum = NAN;
+    ///////////////////////////////////////////////
+    // Enter main loop
+    ///////////////////////////////////////////////
+    uint32_t counter = 0;
 
-    uint32_t message_count = 0;
+    float bme_temp= NAN, bme_press= NAN, bme_hum= NAN;
+    float tmp117_temp= NAN;
+    float aht_temp= NAN, aht_hum= NAN;
+    float sht_temp= NAN, sht_hum= NAN;
 
-    // main loop
     while (true) {
-        message_count++;
+        counter++;
 
         // read sensors
-        if (bme280_read(&bme280_temp, &bme280_press, &bme280_hum) != ESP_OK) {
+        if (bme280_read(&bme_temp, &bme_press, &bme_hum) != ESP_OK) {
             ESP_LOGW(TAG, "BME280 read failed");
-            bme280_temp = bme280_press = bme280_hum = NAN;
+            bme_temp=bme_press=bme_hum = NAN;
         }
         if (tmp117_read(&tmp117_temp) != ESP_OK) {
             ESP_LOGW(TAG, "TMP117 read failed");
             tmp117_temp = NAN;
         }
-        if (aht20_read(&aht20_temp, &aht20_hum) != ESP_OK) {
+        if (aht20_read(&aht_temp, &aht_hum) != ESP_OK) {
             ESP_LOGW(TAG, "AHT20 read failed");
-            aht20_temp = aht20_hum = NAN;
+            aht_temp=aht_hum = NAN;
         }
-        if (sht41_read(&sht41_temp, &sht41_hum) != ESP_OK) {
+        if (sht41_read(&sht_temp, &sht_hum) != ESP_OK) {
             ESP_LOGW(TAG, "SHT41 read failed");
-            sht41_temp = sht41_hum = NAN;
+            sht_temp=sht_hum = NAN;
         }
 
-        bool full_frame = ((message_count % 1000) == 0);
+        // build 4-byte message ID in big-endian
+        uint8_t message_id[4];
+        pack_message_id(message_id, counter);
 
-        // build frame
+        bool is_full = ((counter % 1000) == 0);
+
         uint8_t frame_buf[128];
-        size_t  frame_len = 0;
+        size_t  frame_len=0;
 
-        if (!full_frame) {
-            // minimal
+        if (!is_full) {
+            // Minimal frame => no optional fields, no sensor serial in blocks
             protocol_build_minimal_frame(
                 frame_buf, &frame_len,
-                (uint16_t)(message_count & 0xFFFF),
+                message_id,
                 s_location_id,
-                bme280_temp, bme280_press, bme280_hum,
-                tmp117_temp
+                bme_temp, bme_press, bme_hum,
+                tmp117_temp,
+                aht_temp, aht_hum,
+                sht_temp, sht_hum
             );
         } else {
-            // full frame
+            // Full frame => optional fields + sensor serial in each block
             protocol_build_full_frame(
                 frame_buf, &frame_len,
-                (uint16_t)(message_count & 0xFFFF),
+                message_id,
                 s_location_id,
                 MCU_TYPE,
-                mcu_serial, 
+                mcu_serial,
                 FW_MAJOR,
                 FW_MINOR,
-                bme280_temp, bme280_press, bme280_hum,
-                aht20_temp, aht20_hum
+                bme280_serial, bme_temp, bme_press, bme_hum,
+                tmp117_serial, tmp117_temp,
+                aht20_serial, aht_temp, aht_hum,
+                sht41_serial, sht_temp, sht_hum
             );
         }
 
         // add ECC
         protocol_add_ecc(frame_buf, &frame_len);
 
-        // publish
+        // publish via MQTT
         mqtt_publish_binary(frame_buf, frame_len);
 
-        ESP_LOGI(TAG, "#%u %s frame, length=%u", 
-                 (unsigned)message_count,
-                 full_frame ? "FULL" : "MINIMAL",
-                 (unsigned)frame_len);
+        ESP_LOGI(TAG, "#%u => %s frame, len=%u", (unsigned)counter,
+                 is_full ? "FULL" : "MINIMAL", (unsigned)frame_len);
 
-        // Wait 2s
+        // Sleep 2s
         vTaskDelay(pdMS_TO_TICKS(2000));
     }
 }

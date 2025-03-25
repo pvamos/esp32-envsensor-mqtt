@@ -5,20 +5,17 @@
 extern "C" {
 #endif
 
-// 2 magic bytes: 'S'(0x53), 'N'(0x4E)
-#define MAGIC_BYTE1 0x53
-#define MAGIC_BYTE2 0x4E
+// We define some protocol-related constants for the app
+// location ID is 6 bytes
+#define LOCATION_ID { 10, 20, 30, 40, 50, 60 }
 
-// 6-byte location ID
-#define LOCATION_ID  { 10, 20, 30, 40, 50, 60 }
-
-// We'll define a simple MCU_TYPE, FW_MAJOR, FW_MINOR if needed
-#define MCU_TYPE  1
-#define FW_MAJOR  1
-#define FW_MINOR  2
+// MCU type, firmware version
+#define MCU_TYPE 1
+#define FW_MAJOR 1
+#define FW_MINOR 2
 
 /**
- * @brief The main application entry point.
+ * @brief The ESP-IDF entry point
  */
 void app_main(void);
 
