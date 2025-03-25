@@ -1,89 +1,32 @@
-#ifndef MY_PROTOCOL_H
-#define MY_PROTOCOL_H
-
-#include <stdint.h>
-#include <stddef.h>
-#include <stdbool.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/**************************************************************************
- * BCH(1023,1003) Single-Bit Correction
- *************************************************************************/
-#define BCH_M          10    // GF(2^10)
-#define BCH_N          1023
-#define BCH_K          1003
-#define BCH_T          1     // correct up to 1 bit
-#define BCH_PARITY     (BCH_N - BCH_K) // 20 bits total
-#define FRAME_DATA_LEN 125   // we pad data to 125 bytes
-#define FRAME_ECC_LEN   3    // then append 3 ECC bytes => 128 total
-
-/**************************************************************************
- * Protocol Field Sizes
- *************************************************************************/
-// 2 magic bytes = 'S'(0x53), 'N'(0x4E)
-#define PROTOCOL_MAGIC_BYTE_0  0x53
-#define PROTOCOL_MAGIC_BYTE_1  0x4E
-
-// protocol version or usage
-#define PROTOCOL_VERSION       0x01
-
-// minimal vs. full frames may differ in flags bits
-// but we define them in code for clarity
-
-// location ID is 6 bytes
-#define PROTOCOL_LOCATION_BYTES 6
-
-// message ID is 4 bytes
-#define PROTOCOL_MSGID_BYTES    4
-
-// mcu_serial is 12 bytes
-#define PROTOCOL_MCUSERIAL_BYTES 12
-
-// sensor block approach:
-// minimal does not store sensor serial
-// full does store sensor serial => 8 bytes => 2 extra float slots in that block
-
-/**************************************************************************
- * BCH Initialization / Deinit
- *************************************************************************/
-
-/**
- * @brief Initialize the BCH(1023,1003) environment (once at startup).
- *        Builds any needed Galois field tables for GF(2^10).
- */
-void protocol_init_bch(void);
-
-/**
- * @brief De-initialize BCH if needed (optional).
- */
-void protocol_deinit_bch(void);
-
-/**************************************************************************
- * Frame-Building Functions
- *************************************************************************/
-
-/**
- * @brief Build a MINIMAL frame with 4 sensor blocks:
- *        1) BME280 => 3 floats
- *        2) TMP117 => 1 float
- *        3) AHT20 => 2 floats
- *        4) SHT41 => 2 floats
+/*
+ * protocol.c
  *
- * No sensor serial, no optional fields (MCU type/serial, FW).
- * The final ECC is not added here; call protocol_add_ecc().
- *
- * @param[out] frame_buf    Buffer for up to (125+3) bytes
- * @param[out] frame_len    Actual length before ECC
- * @param[in]  message_id   4-byte message ID
- * @param[in]  location_id  6-byte location ID
- * @param[in]  bme_temp,bme_press,bme_hum  BME280 readings
- * @param[in]  tmp117_temp  TMP117 reading
- * @param[in]  aht_temp,aht_hum   AHT20 readings
- * @param[in]  sht_temp,sht_hum   SHT41 readings
+ * This file now ONLY handles sensor-block formatting for minimal vs. full frames.
+ * We removed BFS-based ECC or any bch init calls. 
+ * ECC generation is done externally by bch_encode() after we finish building the frame.
  */
+
+#include "protocol.h"
+#include <string.h> // memset, memcpy
+
+// Helper: write float as big-endian 4 bytes
+static void put_float_be(uint8_t *dest, float val)
+{
+    union {
+        float f;
+        uint8_t b[4];
+    } conv;
+    conv.f = val;
+    dest[0] = conv.b[3];
+    dest[1] = conv.b[2];
+    dest[2] = conv.b[1];
+    dest[3] = conv.b[0];
+}
+
+/****************************************************************
+ * Minimal Frame
+ * 4 sensor blocks, no optional fields
+ ****************************************************************/
 void protocol_build_minimal_frame(
     uint8_t *frame_buf,
     size_t  *frame_len,
@@ -97,31 +40,75 @@ void protocol_build_minimal_frame(
     float aht_hum,
     float sht_temp,
     float sht_hum
-);
+){
+    // zero out the buffer first
+    memset(frame_buf, 0, 125);
 
-/**
- * @brief Build a FULL frame with:
- *         - optional fields: MCU type (1 byte), 12-byte MCU serial, FW major/minor
- *         - 4 sensor blocks, each with an 8-byte sensor serial plus the measured floats:
- *            1) BME280 => 8-byte serial + 3 floats => total 5 float slots
- *            2) TMP117 => 8-byte serial + 1 float => total 3 float slots
- *            3) AHT20  => 8-byte serial + 2 floats => total 4 float slots
- *            4) SHT41 =>  8-byte serial + 2 floats => total 4 float slots
- *
- * The final ECC is not added here; call protocol_add_ecc().
- *
- * @param[out] frame_buf    Buffer for up to (125+3) bytes
- * @param[out] frame_len    Actual length before ECC
- * @param[in]  message_id   4-byte message ID
- * @param[in]  location_id  6-byte location ID
- * @param[in]  mcu_type     e.g. 1=ESP32
- * @param[in]  mcu_serial   12-byte MCU serial
- * @param[in]  fw_major, fw_minor
- * @param[in]  bme_serial (8 bytes), bme_temp, bme_press, bme_hum
- * @param[in]  tmp_serial (8 bytes), tmp117_temp
- * @param[in]  aht_serial (8 bytes), aht_temp,aht_hum
- * @param[in]  sht_serial (8 bytes), sht_temp,sht_hum
- */
+    size_t offset = 0;
+
+    // 1) Magic "SN"
+    frame_buf[offset++] = PROTOCOL_MAGIC_BYTE_0; // 0x53
+    frame_buf[offset++] = PROTOCOL_MAGIC_BYTE_1; // 0x4E
+
+    // 2) Version
+    frame_buf[offset++] = PROTOCOL_VERSION;
+
+    // 3) Flags => e.g. 0 => minimal
+    uint8_t flags = 0x00;
+    frame_buf[offset++] = flags;
+
+    // 4) 4-byte message ID
+    for (int i = 0; i < PROTOCOL_MSGID_BYTES; i++) {
+        frame_buf[offset++] = message_id[i];
+    }
+
+    // 5) 6-byte location
+    memcpy(&frame_buf[offset], location_id, PROTOCOL_LOCATION_BYTES);
+    offset += PROTOCOL_LOCATION_BYTES;
+
+    // 6) sensorCount => 4
+    frame_buf[offset++] = 4;
+
+    // --- Block #1 => BME280 => type=3 => 3 floats
+    frame_buf[offset++] = 0x00; // high byte of type
+    frame_buf[offset++] = 0x03; // low  byte => type=3
+    frame_buf[offset++] = 3;    // 3 float32
+
+    put_float_be(&frame_buf[offset], bme_temp);  offset += 4;
+    put_float_be(&frame_buf[offset], bme_press); offset += 4;
+    put_float_be(&frame_buf[offset], bme_hum);   offset += 4;
+
+    // --- Block #2 => TMP117 => type=6 => 1 float
+    frame_buf[offset++] = 0x00;
+    frame_buf[offset++] = 0x06;
+    frame_buf[offset++] = 1;
+
+    put_float_be(&frame_buf[offset], tmp117_temp);
+    offset += 4;
+
+    // --- Block #3 => AHT20 => type=5 => 2 floats
+    frame_buf[offset++] = 0x00;
+    frame_buf[offset++] = 0x05;
+    frame_buf[offset++] = 2;
+
+    put_float_be(&frame_buf[offset], aht_temp);  offset += 4;
+    put_float_be(&frame_buf[offset], aht_hum);   offset += 4;
+
+    // --- Block #4 => SHT41 => type=4 => 2 floats
+    frame_buf[offset++] = 0x00;
+    frame_buf[offset++] = 0x04;
+    frame_buf[offset++] = 2;
+
+    put_float_be(&frame_buf[offset], sht_temp);  offset += 4;
+    put_float_be(&frame_buf[offset], sht_hum);   offset += 4;
+
+    *frame_len = offset;
+}
+
+/****************************************************************
+ * Full Frame
+ * includes optional fields + sensor serial in each block
+ ****************************************************************/
 void protocol_build_full_frame(
     uint8_t *frame_buf,
     size_t  *frame_len,
@@ -131,34 +118,104 @@ void protocol_build_full_frame(
     const uint8_t mcu_serial[PROTOCOL_MCUSERIAL_BYTES],
     uint8_t  fw_major,
     uint8_t  fw_minor,
-    const uint8_t bme_serial[8],
-    float bme_temp,
-    float bme_press,
-    float bme_hum,
-    const uint8_t tmp_serial[8],
-    float tmp117_temp,
-    const uint8_t aht_serial[8],
-    float aht_temp,
-    float aht_hum,
-    const uint8_t sht_serial[8],
-    float sht_temp,
-    float sht_hum
-);
+    const uint8_t bme_serial[8], float bme_temp, float bme_press, float bme_hum,
+    const uint8_t tmp_serial[8], float tmp117_temp,
+    const uint8_t aht_serial[8], float aht_temp, float aht_hum,
+    const uint8_t sht_serial[8], float sht_temp, float sht_hum
+){
+    // zero out the buffer
+    memset(frame_buf, 0, 125);
 
-/**************************************************************************
- * ECC
- *************************************************************************/
+    size_t offset = 0;
 
-/**
- * @brief Pad to 125 bytes, then compute the 20-bit BCH remainder and append 3 bytes.
- *
- * @param[in,out] frame_buf partial frame data
- * @param[in,out] frame_len updated final length after ECC appended
- */
-void protocol_add_ecc(uint8_t *frame_buf, size_t *frame_len);
+    // 1) Magic "SN"
+    frame_buf[offset++] = PROTOCOL_MAGIC_BYTE_0; 
+    frame_buf[offset++] = PROTOCOL_MAGIC_BYTE_1;
 
-#ifdef __cplusplus
+    // 2) Version
+    frame_buf[offset++] = PROTOCOL_VERSION;
+
+    // 3) Flags => bit1..3 => 0x0E => optional fields
+    uint8_t flags = 0x0E;
+    frame_buf[offset++] = flags;
+
+    // 4) 4-byte message ID
+    for (int i = 0; i < PROTOCOL_MSGID_BYTES; i++) {
+        frame_buf[offset++] = message_id[i];
+    }
+
+    // 5) 6-byte location
+    memcpy(&frame_buf[offset], location_id, PROTOCOL_LOCATION_BYTES);
+    offset += PROTOCOL_LOCATION_BYTES;
+
+    // Optional fields => bit1=1 => 1 byte => mcu_type
+    frame_buf[offset++] = mcu_type;
+
+    // bit2=1 => 12-byte MCU serial
+    memcpy(&frame_buf[offset], mcu_serial, PROTOCOL_MCUSERIAL_BYTES);
+    offset += PROTOCOL_MCUSERIAL_BYTES;
+
+    // bit3=1 => 2-byte firmware version
+    frame_buf[offset++] = fw_major;
+    frame_buf[offset++] = fw_minor;
+
+    // sensorCount => 4
+    frame_buf[offset++] = 4;
+
+    // Block #1 => BME280 => type=3 => 8-byte serial + 3 floats => total 5
+    {
+        frame_buf[offset++] = 0x00;
+        frame_buf[offset++] = 0x03;
+        frame_buf[offset++] = 5; // 2 for 8-byte serial + 3 actual floats
+
+        // 8-byte sensor serial
+        memcpy(&frame_buf[offset], bme_serial, 8);
+        offset += 8;
+
+        // 3 floats
+        put_float_be(&frame_buf[offset], bme_temp);   offset += 4;
+        put_float_be(&frame_buf[offset], bme_press);  offset += 4;
+        put_float_be(&frame_buf[offset], bme_hum);    offset += 4;
+    }
+
+    // Block #2 => TMP117 => type=6 => 8-byte serial + 1 float => total 3
+    {
+        frame_buf[offset++] = 0x00;
+        frame_buf[offset++] = 0x06;
+        frame_buf[offset++] = 3;
+
+        memcpy(&frame_buf[offset], tmp_serial, 8);
+        offset += 8;
+
+        put_float_be(&frame_buf[offset], tmp117_temp);
+        offset += 4;
+    }
+
+    // Block #3 => AHT20 => type=5 => 8-byte serial + 2 floats => total 4
+    {
+        frame_buf[offset++] = 0x00;
+        frame_buf[offset++] = 0x05;
+        frame_buf[offset++] = 4;
+
+        memcpy(&frame_buf[offset], aht_serial, 8);
+        offset += 8;
+
+        put_float_be(&frame_buf[offset], aht_temp); offset += 4;
+        put_float_be(&frame_buf[offset], aht_hum);  offset += 4;
+    }
+
+    // Block #4 => SHT41 => type=4 => 8-byte serial + 2 floats => total 4
+    {
+        frame_buf[offset++] = 0x00;
+        frame_buf[offset++] = 0x04;
+        frame_buf[offset++] = 4;
+
+        memcpy(&frame_buf[offset], sht_serial, 8);
+        offset += 8;
+
+        put_float_be(&frame_buf[offset], sht_temp); offset += 4;
+        put_float_be(&frame_buf[offset], sht_hum);  offset += 4;
+    }
+
+    *frame_len = offset;
 }
-#endif
-
-#endif // MY_PROTOCOL_H

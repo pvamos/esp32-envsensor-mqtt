@@ -5,8 +5,9 @@
 extern "C" {
 #endif
 
-// We define some protocol-related constants for the app
-// location ID is 6 bytes
+// We define some constants for the app
+
+// A 6-byte location ID
 #define LOCATION_ID { 10, 20, 30, 40, 50, 60 }
 
 // MCU type, firmware version

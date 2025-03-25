@@ -13,6 +13,7 @@
 
 #include "protocol.h"
 #include <string.h> // memset, memcpy
+#include "bch.h"
 
 // We build a naive BFS for the polynomial remainder. Real code would store
 // a genuine generator polynomial. We'll store a partial approach:
