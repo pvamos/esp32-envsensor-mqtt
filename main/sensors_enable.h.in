@@ -1,0 +1,6 @@
+#pragma once
+
+/* Generated from CMake options in main/CMakeLists.txt – do not edit. */
+
+#define ENVSENSOR_USE_BME280 @ENVSENSOR_USE_BME280_VALUE@
+#define ENVSENSOR_USE_SHT4X  @ENVSENSOR_USE_SHT4X_VALUE@

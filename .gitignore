@@ -1,0 +1,28 @@
+# ESP-IDF / CMake build output
+/build/
+**/build/
+**/CMakeFiles/
+**/CMakeCache.txt
+**/cmake_install.cmake
+**/compile_commands.json
+**/log/
+**/managed_components/
+
+# ESP-IDF generated/local files
+sdkconfig.old
+/main/sensors_enable.h
+
+# Private local configuration
+private_config.h
+*.local.h
+sdkconfig.defaults.private
+secrets/
+.env
+.env.*
+
+# Editor / OS noise
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
