@@ -8,6 +8,8 @@ authors:
     affiliation: "John Wesley Theological College, Budapest"
 title: "ESP32 environmental sensor node firmware"
 version: "1.0.0"
+date-released: 2026-09-22
+doi: 10.5281/zenodo.22884125
 repository-code: "https://github.com/pvamos/esp32-envsensor-mqtt"
 license: MIT
 keywords:
