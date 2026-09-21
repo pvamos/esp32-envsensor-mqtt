@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use this software in research, please cite the archived software release and the associated thesis."
+type: software
+authors:
+  - family-names: "Vámos"
+    given-names: "Péter"
+    orcid: "https://orcid.org/0009-0004-8554-5014"
+    affiliation: "John Wesley Theological College, Budapest"
+title: "ESP32 environmental sensor node firmware"
+version: "1.0.0"
+repository-code: "https://github.com/pvamos/esp32-envsensor-mqtt"
+license: MIT
+keywords:
+  - "environmental monitoring"
+  - "sensor network"
+  - "ESP32-C3"
+  - "BME280"
+  - "SHT4X"
+  - "MQTT"
+  - "Protocol Buffers"
+  - "IoT"
+  - "embedded systems"
+abstract: >-
+  ESP-IDF firmware for low-cost environmental sensor nodes used in a scalable environmental monitoring network. The firmware reads BME280 and SHT4X sensors, encodes measurements with Protocol Buffers, publishes them over MQTTS, and uses deep sleep between measurement cycles.
