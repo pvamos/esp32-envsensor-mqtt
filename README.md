@@ -38,6 +38,7 @@ wake/reset
 **Péter Vámos**
 
 * [https://github.com/pvamos](https://github.com/pvamos)
+* [ORCID: 0009-0004-8554-5014](https://orcid.org/0009-0004-8554-5014)
 * [https://linkedin.com/in/pvamos](https://linkedin.com/in/pvamos)
 * [pvamos@gmail.com](mailto:pvamos@gmail.com)
 
@@ -47,6 +48,13 @@ wake/reset
 
 This project was created for, and is part of, the author's **2026 thesis project**
 for the **Expert in Applied Environmental Studies BSc** program at **John Wesley Theological College, Budapest**.
+
+**Thesis:** *Környezeti paraméterek mérése a tudomány és technológia fejlődésének tükrében – Egy skálázható szenzorhálózat megvalósításának tanulságai*<br>
+**Thesis DOI:** [10.5281/zenodo.22843091](https://doi.org/10.5281/zenodo.22843091)<br>
+**Research project overview:** [environmental-sensor-network](https://github.com/pvamos/environmental-sensor-network)<br>
+**Author ORCID:** [0009-0004-8554-5014](https://orcid.org/0009-0004-8554-5014)
+
+This repository is one implementation component of the broader environmental sensor network. The project overview repository documents the end-to-end architecture, the role of each software component, research outputs, archival releases and reproducibility information.
 
 ## 📜 Current behavior
 
@@ -202,6 +210,19 @@ Useful monitor shortcuts:
 - `Ctrl+]` exits the monitor
 - `Ctrl+T Ctrl+R` resets the chip
 - `Ctrl+T Ctrl+H` shows monitor help
+
+---
+
+## 🧾 Public baseline configuration
+
+The repository includes `sdkconfig.defaults` with a small, non-secret ESP32-C3 baseline. Wi-Fi and MQTT credentials are deliberately **not** stored there. For a clean configuration:
+
+```bash
+idf.py set-target esp32c3
+idf.py reconfigure
+```
+
+Review the generated local `sdkconfig` before building if your board or flash configuration differs.
 
 ---
 
@@ -603,13 +624,25 @@ git submodule update --init --recursive
 
 ---
 
+## 📚 Citation and archival release
+
+This repository is being prepared as a versioned research-software artifact associated with the BSc thesis above.
+
+* `CITATION.cff` provides GitHub-compatible citation metadata.
+* `.zenodo.json` provides Zenodo-specific metadata and links this software to the thesis with `isSupplementTo`.
+* The planned first archival software release is **v1.0.0**.
+* After Zenodo mints the software DOI, add the DOI badge and DOI to this README and to `CITATION.cff` without creating a new software version solely for that metadata backlink.
+
+Until the software DOI exists, cite the thesis DOI and the repository URL.
+
+---
+
 ## 🛣 Roadmap / recommended improvements
 
 - Move Wi-Fi and MQTT configuration to Kconfig, NVS provisioning, or a private header pattern.
 - Implement battery voltage measurement and encode `batt` in millivolts.
 - Optionally add SNTP or another trusted time source when TLS certificate validation is enabled.
 - Optionally generate MQTT topic from a base topic plus the device MAC or a provisioned device ID.
-- Add a `sdkconfig.defaults` file for reproducible public builds, without secrets.
 - Consider adding CI that builds with all sensor combinations.
 
 ---

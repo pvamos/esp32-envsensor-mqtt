@@ -1,0 +1,16 @@
+# Public baseline configuration for reproducible ESP-IDF builds.
+# Contains no Wi-Fi, MQTT, site or device credentials.
+#
+# Generate/refresh the local sdkconfig with:
+#   idf.py set-target esp32c3
+#   idf.py reconfigure
+
+CONFIG_IDF_TARGET="esp32c3"
+CONFIG_IDF_TARGET_ESP32C3=y
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="4MB"
+CONFIG_COMPILER_OPTIMIZATION_PERF=y
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_80=y
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ=80
+CONFIG_LOG_DEFAULT_LEVEL_WARN=y
+CONFIG_LOG_DEFAULT_LEVEL=2

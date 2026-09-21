@@ -1,0 +1,40 @@
+{
+  "creators": [
+    {
+      "name": "Vámos, Péter",
+      "orcid": "0009-0004-8554-5014",
+      "affiliation": "John Wesley Theological College, Budapest"
+    }
+  ],
+  "title": "ESP32 environmental sensor node firmware",
+  "description": "ESP-IDF firmware for low-cost environmental sensor nodes used in a scalable environmental monitoring network. The firmware reads BME280 and SHT4X sensors, encodes measurements with Protocol Buffers, publishes them over MQTTS, and uses deep sleep between measurement cycles.",
+  "version": "1.0.0",
+  "access_right": "open",
+  "license": "mit",
+  "upload_type": "software",
+  "language": "eng",
+  "keywords": [
+    "environmental monitoring",
+    "sensor network",
+    "ESP32-C3",
+    "BME280",
+    "SHT4X",
+    "MQTT",
+    "Protocol Buffers",
+    "IoT",
+    "embedded systems"
+  ],
+  "related_identifiers": [
+    {
+      "scheme": "doi",
+      "identifier": "10.5281/zenodo.22843091",
+      "relation": "isSupplementTo",
+      "resource_type": "publication-dissertation"
+    },
+    {
+      "scheme": "url",
+      "identifier": "https://github.com/pvamos/environmental-sensor-network",
+      "relation": "isPartOf"
+    }
+  ]
+}
